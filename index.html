@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GREEN-API Демо</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            display: flex;
+            gap: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .left-column {
+            flex: 1;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .right-column {
+            flex: 1;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        h2 {
+            color: #444;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        small {
+            color: #666;
+            font-size: 12px;
+        }
+        
+        .methods-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            background: #4CAF50;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        #responseOutput {
+            width: 100%;
+            height: 300px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fafafa;
+            font-family: monospace;
+            font-size: 14px;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+        
+        #statusMessage {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .phone-inputs {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Демонстрация методов GREEN-API</h1>
+    
+    <div class="container">
+        <!-- Левая колонка -->
+        <div class="left-column">
+            <h2>Параметры подключения</h2>
+            
+            <div class="input-group">
+                <label for="idInstance">ID Instance:</label>
+                <input type="text" id="idInstance" placeholder="Введите ваш ID Instance">
+            </div>
+            
+            <div class="input-group">
+                <label for="apiTokenInstance">API Token Instance:</label>
+                <input type="text" id="apiTokenInstance" placeholder="Введите ваш API Token Instance">
+            </div>
+            
+            <div class="phone-inputs">
+                <div class="input-group">
+                    <label for="phoneNumber">Номер телефона:</label>
+                    <input type="text" id="phoneNumber" placeholder="7777234567">
+                    <small>Только цифры (без + и других символов)</small>
+                </div>
+                
+                <div class="input-group">
+                    <label for="chatId">Chat ID:</label>
+                    <input type="text" id="chatId" readonly>
+                    <small>Формат: номер@c.us (формируется автоматически)</small>
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <label for="messageText">Текст сообщения:</label>
+                <input type="text" id="messageText" value="Hello World!">
+            </div>
+            
+            <div class="input-group">
+                <label for="fileUrl">URL файла:</label>
+                <input type="text" id="fileUrl" placeholder="https://my.site.com/img/phone.png">
+                <small>Для метода sendFileByUrl</small>
+            </div>
+        </div>
+        
+        <!-- Правая колонка -->
+        <div class="right-column">
+            <h2>Методы API</h2>
+            
+            <div class="methods-grid">
+                <button onclick="getSettings()">getSettings</button>
+                <button onclick="getStateInstance()">getStateInstance</button>
+                <button onclick="sendMessage()">sendMessage</button>
+                <button onclick="sendFileByUrl()">sendFileByUrl</button>
+            </div>
+            
+            <h2>Ответ API</h2>
+            <textarea id="responseOutput" readonly placeholder="Ответы методов будут отображаться здесь..."></textarea>
+            
+            <div id="statusMessage"></div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE_URL = 'https://api.green-api.com';
+        let idInstance = '';
+        let apiTokenInstance = '';
+        
+        // Автоматическое формирование Chat ID при вводе номера
+        document.getElementById('phoneNumber').addEventListener('input', function() {
+            const phone = this.value.trim();
+            if (phone) {
+                document.getElementById('chatId').value = phone + '@c.us';
+            } else {
+                document.getElementById('chatId').value = '';
+            }
+        });
+        
+        // Универсальная функция для вызова API
+        async function callGreenApi(method, endpoint, body = null) {
+            if (!idInstance || !apiTokenInstance) {
+                showStatus('Сначала заполните ID Instance и API Token', 'error');
+                return null;
+            }
+            
+            const url = `${API_BASE_URL}/waInstance${idInstance}/${endpoint}/${apiTokenInstance}`;
+            
+            const options = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            };
+            
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+            
+            try {
+                const response = await fetch(url, options);
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Ошибка запроса:', error);
+                return { error: error.message };
+            }
+        }
+        
+        // getSettings - Получить настройки аккаунта
+        async function getSettings() {
+            await updateCredentials();
+            const response = await callGreenApi('GET', 'getSettings');
+            displayResponse('getSettings', response);
+            showStatus('Настройки получены', 'success');
+        }
+        
+        // getStateInstance - Получить состояние инстанса
+        async function getStateInstance() {
+            await updateCredentials();
+            const response = await callGreenApi('GET', 'getStateInstance');
+            displayResponse('getStateInstance', response);
+            showStatus('Состояние инстанса получено', 'success');
+        }
+        
+        // sendMessage - Отправить сообщение
+        async function sendMessage() {
+            await updateCredentials();
+            const chatId = document.getElementById('chatId').value.trim();
+            const messageText = document.getElementById('messageText').value.trim();
+            
+            if (!chatId) {
+                showStatus('Укажите номер телефона для отправки сообщения', 'error');
+                return;
+            }
+            
+            if (!messageText) {
+                showStatus('Введите текст сообщения', 'error');
+                return;
+            }
+            
+            const requestBody = {
+                chatId: chatId,
+                message: messageText
+            };
+            
+            const response = await callGreenApi('POST', 'sendMessage', requestBody);
+            displayResponse('sendMessage', response);
+            
+            if (response.idMessage) {
+                showStatus('Сообщение отправлено! ID: ' + response.idMessage, 'success');
+            } else {
+                showStatus('Ошибка при отправке сообщения', 'error');
+            }
+        }
+        
+        // sendFileByUrl - Отправить файл по URL
+        async function sendFileByUrl() {
+            await updateCredentials();
+            const chatId = document.getElementById('chatId').value.trim();
+            const fileUrl = document.getElementById('fileUrl').value.trim();
+            
+            if (!chatId) {
+                showStatus('Укажите номер телефона для отправки файла', 'error');
+                return;
+            }
+            
+            if (!fileUrl) {
+                showStatus('Укажите URL файла', 'error');
+                return;
+            }
+            
+            try {
+                new URL(fileUrl);
+            } catch (e) {
+                showStatus('Некорректный URL', 'error');
+                return;
+            }
+            
+            const fileName = fileUrl.split('/').pop() || 'file';
+            
+            const requestBody = {
+                chatId: chatId,
+                urlFile: fileUrl,
+                fileName: fileName
+            };
+            
+            const response = await callGreenApi('POST', 'sendFileByUrl', requestBody);
+            displayResponse('sendFileByUrl', response);
+            
+            if (response.idMessage) {
+                showStatus(`Файл принят в обработку! ID: ${response.idMessage}`, 'success');
+                
+                // Проверяем статус файла через 3 секунды
+                setTimeout(() => checkFileStatus(response.idMessage), 3000);
+            } else {
+                showStatus('Ошибка при отправке файла', 'error');
+            }
+        }
+        
+        // Проверка статуса файла
+        async function checkFileStatus(messageId) {
+            const response = await callGreenApi('GET', `getMessage/${messageId}`);
+            
+            if (response && response.type === 'outgoing' && response.status === 'sent') {
+                showStatus('Файл успешно отправлен!', 'success');
+            } else if (response && response.status === 'error') {
+                showStatus(`Ошибка доставки файла: ${response.error}`, 'error');
+            }
+        }
+        
+        // Обновление учетных данных
+        async function updateCredentials() {
+            idInstance = document.getElementById('idInstance').value.trim();
+            apiTokenInstance = document.getElementById('apiTokenInstance').value.trim();
+            
+            if (!idInstance || !apiTokenInstance) {
+                throw new Error('Заполните ID Instance и API Token');
+            }
+        }
+        
+        // Отобразить ответ в текстовом поле
+        function displayResponse(method, data) {
+            const output = document.getElementById('responseOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            const responseText = `[${timestamp}] ${method}:\n${JSON.stringify(data, null, 2)}\n\n`;
+            output.value = responseText + output.value;
+        }
+        
+        // Показать статусное сообщение
+        function showStatus(message, type) {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = type;
+            statusEl.style.display = 'block';
+            
+            setTimeout(() => {
+                statusEl.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
